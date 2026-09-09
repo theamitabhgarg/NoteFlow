@@ -1,0 +1,1025 @@
+/* ============================================================
+   NoteFlow - collapsible sidebar + settings + dark mode
+   ============================================================ */
+
+/* ---------- Collapsible sidebar ---------- */
+
+/* Keep the sidebar and content directly beside each other.
+   The original dashboard layout uses a flex-based structure, so
+   overriding it with grid here creates the large blank gap seen
+   when the sidebar is collapsed. */
+.dashboard {
+  display: flex !important;
+  width: 100%;
+  min-width: 0;
+}
+
+.dashboard .sidebar {
+  position: relative !important;
+  flex: 0 0 280px !important;
+  width: 280px !important;
+  min-width: 280px !important;
+  box-sizing: border-box;
+  overflow: visible !important;
+  transition: flex-basis 220ms ease, width 220ms ease, min-width 220ms ease, padding 220ms ease;
+}
+
+.dashboard .main-area {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0;
+  margin-left: 0 !important;
+}
+
+/* Brand alignment */
+.dashboard .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard .brand > div:last-child {
+  min-width: 0;
+}
+
+.dashboard .brand h1 {
+  margin: 0 !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dashboard .brand p {
+  margin: 5px 0 0 !important;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.sidebar-collapse-button {
+  position: absolute;
+  top: 24px;
+  right: 8px;
+  z-index: 20;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  color: #e8f0eb;
+  background: #1b5144;
+  box-shadow: 0 5px 16px rgba(15, 48, 40, 0.22);
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.sidebar-collapse-button:hover {
+  background: #286656;
+  transform: translateY(-1px);
+}
+
+.sidebar-collapse-button svg {
+  transform: rotate(90deg);
+  transition: transform 220ms ease;
+}
+
+.dashboard.sidebar-collapsed .sidebar {
+  flex-basis: 80px !important;
+  width: 80px !important;
+  min-width: 80px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+.dashboard.sidebar-collapsed .sidebar-collapse-button svg {
+  transform: rotate(-90deg);
+}
+
+.dashboard.sidebar-collapsed .brand {
+  justify-content: center;
+  gap: 0;
+}
+
+.dashboard.sidebar-collapsed .brand-mark {
+  margin: 0 auto;
+}
+
+.dashboard.sidebar-collapsed .sidebar-expand-content {
+  display: none !important;
+}
+
+.dashboard.sidebar-collapsed .sidebar-nav {
+  align-items: center;
+}
+
+.dashboard.sidebar-collapsed .nav-item {
+  justify-content: center;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.dashboard.sidebar-collapsed .sidebar-divider {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* ---------- Settings button ---------- */
+
+.settings-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settings-button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  color: #31594f;
+  background: transparent;
+  box-shadow: none;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.settings-button svg {
+  display: block;
+}
+
+.settings-button:hover {
+  color: #174f42;
+  background: #edf3ef;
+  transform: translateY(-1px);
+}
+
+.settings-button.active {
+  color: #174f42;
+  background: #e5efea;
+  transform: none;
+}
+
+.settings-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 100;
+  width: 320px;
+  padding: 18px;
+  border: 1px solid #dce3df;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(20, 43, 36, 0.16);
+}
+
+.settings-heading strong {
+  display: block;
+  color: #183d34;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settings-heading span {
+  display: block;
+  margin-top: 4px;
+  color: #71817a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-divider {
+  height: 1px;
+  margin: 16px 0;
+  background: #e7ece9;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.settings-row-label strong {
+  display: block;
+  color: #213d36;
+  font-size: 13px;
+}
+
+.settings-row-label span {
+  display: block;
+  max-width: 220px;
+  margin-top: 4px;
+  color: #7a8882;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.theme-switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: #c9d2cd;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: background 180ms ease;
+}
+
+.theme-switch-knob {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transform: translateX(0);
+  transition: transform 180ms ease;
+}
+
+.theme-switch.on {
+  background: #236451;
+}
+
+.theme-switch.on .theme-switch-knob {
+  transform: translateX(20px);
+}
+
+/* ---------- Dark mode ---------- */
+
+.dashboard.theme-dark {
+  background: #101c19 !important;
+}
+
+.dashboard.theme-dark .main-area {
+  background: #101c19 !important;
+}
+
+.dashboard.theme-dark .topbar {
+  background: #14231f !important;
+  border-bottom-color: #293b35 !important;
+}
+
+.dashboard.theme-dark .notes-content {
+  background: #101c19 !important;
+}
+
+.dashboard.theme-dark .page-heading h2,
+.dashboard.theme-dark .page-heading h3,
+.dashboard.theme-dark .statistics-panel-heading h3,
+.dashboard.theme-dark .stat-card strong,
+.dashboard.theme-dark .note-title,
+.dashboard.theme-dark .note-card-title,
+.dashboard.theme-dark .settings-heading strong,
+.dashboard.theme-dark .settings-row-label strong {
+  color: #edf5f1 !important;
+}
+
+.dashboard.theme-dark .page-description,
+.dashboard.theme-dark .eyebrow,
+.dashboard.theme-dark .note-meta,
+.dashboard.theme-dark .muted-text,
+.dashboard.theme-dark .settings-heading span,
+.dashboard.theme-dark .settings-row-label span,
+.dashboard.theme-dark .note-count span {
+  color: #9aaca5 !important;
+}
+
+.dashboard.theme-dark .search-wrapper,
+.dashboard.theme-dark .filter-button,
+.dashboard.theme-dark .sort-button {
+  background: #172823 !important;
+  border-color: #30433c !important;
+  color: #dce8e3 !important;
+}
+
+.dashboard.theme-dark .search-wrapper input {
+  color: #edf5f1 !important;
+}
+
+.dashboard.theme-dark .search-wrapper input::placeholder {
+  color: #7f928a !important;
+}
+
+.dashboard.theme-dark .dashboard-note-card,
+.dashboard.theme-dark .stat-card,
+.dashboard.theme-dark .statistics-panel,
+.dashboard.theme-dark .empty-state {
+  background: #172823 !important;
+  border-color: #2d4139 !important;
+  color: #dce8e3 !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+.dashboard.theme-dark .dashboard-note-card p,
+.dashboard.theme-dark .dashboard-note-card .note-preview,
+.dashboard.theme-dark .dashboard-note-card .note-content {
+  color: #a9b9b3 !important;
+}
+
+.dashboard.theme-dark .settings-button {
+  background: transparent !important;
+  color: #c9dbd4 !important;
+}
+
+.dashboard.theme-dark .settings-button:hover,
+.dashboard.theme-dark .settings-button.active {
+  background: #20362f !important;
+  color: #edf5f1 !important;
+}
+
+.dashboard.theme-dark .settings-popover {
+  background: #172823 !important;
+  border-color: #30443c !important;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard.theme-dark .settings-divider {
+  background: #30443c !important;
+}
+
+.dashboard.theme-dark .profile-dropdown,
+.dashboard.theme-dark .dropdown-user,
+.dashboard.theme-dark .dropdown-item {
+  background: #172823 !important;
+  color: #dce8e3 !important;
+}
+
+.dashboard.theme-dark .profile-dropdown {
+  border-color: #30443c !important;
+}
+
+.dashboard.theme-dark .dropdown-item:hover {
+  background: #20362f !important;
+}
+
+@media (max-width: 900px) {
+  .dashboard .sidebar {
+    flex-basis: 80px !important;
+    width: 80px !important;
+    min-width: 80px !important;
+  }
+
+  .dashboard .sidebar-expand-content {
+    display: none !important;
+  }
+
+  .dashboard .sidebar {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .dashboard .brand,
+  .dashboard .nav-item {
+    justify-content: center;
+  }
+
+  .dashboard .brand-mark {
+    margin: 0 auto;
+  }
+
+  .dashboard .nav-item {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+
+/* ============================================================
+   Final visual polish
+   ============================================================ */
+
+/* Keep the sidebar present for the full viewport while the main
+   notes area is allowed to scroll independently. This keeps the
+   quote and footer visible on All Notes and Tags as well. */
+.dashboard .sidebar {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  align-self: flex-start;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box;
+  overflow: hidden !important;
+  position: sticky !important;
+  top: 0;
+}
+
+.dashboard .sidebar-nav {
+  flex: 0 0 auto;
+}
+
+.dashboard .sidebar-divider {
+  flex: 0 0 auto;
+}
+
+/* Push the quote/decor/footer to the bottom of the sidebar instead
+   of letting them disappear below a long notes page. */
+.dashboard .sidebar-quote {
+  margin-top: auto !important;
+  flex: 0 0 auto;
+}
+
+.dashboard .sidebar-decoration,
+.dashboard .sidebar-footer {
+  flex: 0 0 auto;
+}
+
+/* Cleaner NoteFlow brand alignment */
+.dashboard .brand {
+  flex: 0 0 auto;
+  align-items: center !important;
+  min-height: 58px;
+}
+
+.dashboard .brand-mark {
+  flex: 0 0 31px;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+}
+
+.dashboard .brand h1 {
+  font-size: 29px !important;
+  letter-spacing: -0.6px;
+}
+
+.dashboard .brand p {
+  font-size: 12px !important;
+  letter-spacing: 0.1px;
+}
+
+/* Settings: make it a deliberate, understated circular control. */
+.settings-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-button {
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid #d4dfd9 !important;
+  background: #ffffff !important;
+  color: #24584b !important;
+  box-shadow: 0 2px 8px rgba(23, 79, 66, 0.06) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 0 !important;
+  transform: none !important;
+}
+
+.settings-button svg {
+  width: 20px !important;
+  height: 20px !important;
+  stroke-width: 1.75 !important;
+}
+
+.settings-button:hover {
+  background: #f3f7f5 !important;
+  border-color: #bfd1c9 !important;
+  color: #174f42 !important;
+  box-shadow: 0 4px 12px rgba(23, 79, 66, 0.11) !important;
+  transform: translateY(-1px) !important;
+}
+
+.settings-button.active {
+  background: #1f5c4d !important;
+  border-color: #1f5c4d !important;
+  color: #ffffff !important;
+  box-shadow: 0 5px 14px rgba(23, 79, 66, 0.17) !important;
+}
+
+.dashboard.theme-dark .settings-button {
+  background: #182a25 !important;
+  border-color: #385048 !important;
+  color: #cfe0d9 !important;
+}
+
+.dashboard.theme-dark .settings-button:hover {
+  background: #203831 !important;
+  border-color: #4a6259 !important;
+  color: #f0f6f3 !important;
+}
+
+.dashboard.theme-dark .settings-button.active {
+  background: #2a6b58 !important;
+  border-color: #2a6b58 !important;
+  color: #ffffff !important;
+}
+
+/* In collapsed mode the sidebar content stays centered, while the
+   bottom quote/decor/footer remain intentionally hidden. */
+.dashboard.sidebar-collapsed .sidebar {
+  align-items: stretch;
+}
+
+.dashboard.sidebar-collapsed .brand {
+  min-height: 58px;
+}
+
+/* The main area must always consume the space released by the sidebar. */
+.dashboard .main-area {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .dashboard .sidebar {
+    position: sticky !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+}
+
+
+/* ---------- Admin create-user settings ---------- */
+.settings-admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-admin-heading strong {
+  display: block;
+  color: #183d34;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-admin-heading span {
+  display: block;
+  margin-top: 4px;
+  color: #71817a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-create-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.admin-create-user-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d8e1dc;
+  border-radius: 9px;
+  padding: 10px 11px;
+  outline: none;
+  background: #fbfcfb;
+  color: #183d34;
+  font: inherit;
+  font-size: 12px;
+}
+
+.admin-create-user-form input:focus {
+  border-color: #6d9a8b;
+  box-shadow: 0 0 0 3px rgba(56, 108, 91, 0.09);
+}
+
+.admin-create-user-button {
+  width: 100%;
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: #1f5c4d;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.admin-create-user-button:hover:not(:disabled) {
+  background: #174f42;
+  transform: translateY(-1px);
+}
+
+.admin-create-user-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-create-user-success,
+.admin-create-user-error {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.admin-create-user-success {
+  color: #2d6b54;
+}
+
+.admin-create-user-error {
+  color: #a24b42;
+}
+
+.dark-mode .settings-admin-heading strong {
+  color: #e7f0eb;
+}
+
+.dark-mode .settings-admin-heading span {
+  color: #9aaca3;
+}
+
+.dark-mode .admin-create-user-form input {
+  border-color: #3b5149;
+  background: #20332d;
+  color: #e7f0eb;
+}
+
+.dark-mode .admin-create-user-form input::placeholder {
+  color: #82978e;
+}
+
+/* ============================================================
+   NoteFlow - current dashboard refinements
+   ============================================================ */
+
+/* Admin settings now lives in the sidebar, not the top bar. */
+.dashboard .sidebar-nav .nav-item {
+  position: relative;
+}
+
+.dashboard .sidebar-nav .nav-item svg {
+  flex: 0 0 auto;
+}
+
+/* Minimal profile button: initials only. */
+.profile-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-avatar-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: #2f6b5b;
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(23, 79, 66, 0.13);
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.user-avatar-button:hover {
+  background: #245b4d;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(23, 79, 66, 0.18);
+}
+
+.profile-dropdown-minimal {
+  min-width: 210px;
+}
+
+.minimal-dropdown-user {
+  padding-bottom: 2px;
+}
+
+.minimal-dropdown-user strong {
+  display: block;
+  color: #183d34;
+  font-size: 13px;
+}
+
+.minimal-dropdown-user span {
+  display: block;
+  margin-top: 3px;
+  color: #7b8983;
+  font-size: 11px;
+}
+
+/* Full settings page. */
+.settings-page {
+  min-height: calc(100vh - 73px);
+}
+
+.settings-page-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 980px;
+}
+
+.settings-page-card {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #dfe6e2;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(20, 43, 36, 0.06);
+}
+
+.settings-page-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #edf4f0;
+  color: #276453;
+}
+
+.settings-page-card-heading {
+  margin-top: 18px;
+}
+
+.settings-page-card-heading h3 {
+  margin: 0;
+  color: #183d34;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.settings-page-card-heading p {
+  margin: 7px 0 0;
+  max-width: 470px;
+  color: #74827c;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.settings-page-divider {
+  height: 1px;
+  margin: 22px 0;
+  background: #e7ece9;
+}
+
+.settings-page-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.settings-page-row strong {
+  display: block;
+  color: #213d36;
+  font-size: 14px;
+}
+
+.settings-page-row span {
+  display: block;
+  margin-top: 4px;
+  color: #7a8882;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.admin-create-user-page-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.admin-create-user-page-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-create-user-page-form label > span {
+  color: #49635b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-create-user-page-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid #d7e0db;
+  border-radius: 10px;
+  outline: none;
+  background: #fbfcfb;
+  color: #183d34;
+  font: inherit;
+  font-size: 13px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.admin-create-user-page-form input:focus {
+  border-color: #6c998a;
+  box-shadow: 0 0 0 3px rgba(56, 108, 91, 0.09);
+}
+
+.admin-create-user-page-button {
+  width: 100%;
+  margin-top: 3px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #1f5c4d;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.admin-create-user-page-button:hover:not(:disabled) {
+  background: #174f42;
+  transform: translateY(-1px);
+}
+
+.admin-create-user-page-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.settings-access-denied {
+  max-width: 620px;
+  padding: 28px;
+  border: 1px solid #e2e8e4;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.settings-access-denied h2 {
+  margin: 0;
+  color: #183d34;
+}
+
+.settings-access-denied p {
+  margin: 8px 0 0;
+  color: #74827c;
+}
+
+/* Pagination. */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 30px 0 18px;
+}
+
+.pagination-button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #dbe4df;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #ffffff;
+  color: #526b63;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.pagination-button:hover:not(:disabled):not(.active) {
+  background: #f1f6f3;
+  border-color: #c5d5cd;
+  color: #24584b;
+  transform: translateY(-1px);
+}
+
+.pagination-button.active {
+  border-color: #1f5c4d;
+  background: #1f5c4d;
+  color: #ffffff;
+}
+
+.pagination-button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.pagination-arrow svg {
+  transform: rotate(90deg);
+}
+
+.pagination-arrow.next svg {
+  transform: rotate(-90deg);
+}
+
+/* Dark mode for the new settings page and profile control. */
+.dashboard.theme-dark .user-avatar-button {
+  background: #2a6b58;
+  color: #ffffff;
+}
+
+.dashboard.theme-dark .user-avatar-button:hover {
+  background: #347b66;
+}
+
+.dashboard.theme-dark .settings-page-card,
+.dashboard.theme-dark .settings-access-denied {
+  background: #172823 !important;
+  border-color: #2d4139 !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+.dashboard.theme-dark .settings-page-card-icon {
+  background: #20362f;
+  color: #cfe2d9;
+}
+
+.dashboard.theme-dark .settings-page-card-heading h3,
+.dashboard.theme-dark .settings-page-row strong,
+.dashboard.theme-dark .settings-access-denied h2 {
+  color: #edf5f1 !important;
+}
+
+.dashboard.theme-dark .settings-page-card-heading p,
+.dashboard.theme-dark .settings-page-row span,
+.dashboard.theme-dark .settings-access-denied p,
+.dashboard.theme-dark .admin-create-user-page-form label > span {
+  color: #9aaca5 !important;
+}
+
+.dashboard.theme-dark .settings-page-divider {
+  background: #30443c;
+}
+
+.dashboard.theme-dark .admin-create-user-page-form input {
+  border-color: #3b5149;
+  background: #20332d;
+  color: #e7f0eb;
+}
+
+.dashboard.theme-dark .admin-create-user-page-form input::placeholder {
+  color: #82978e;
+}
+
+.dashboard.theme-dark .pagination-button {
+  border-color: #334a42;
+  background: #172823;
+  color: #b9cbc4;
+}
+
+.dashboard.theme-dark .pagination-button:hover:not(:disabled):not(.active) {
+  background: #20362f;
+  border-color: #466057;
+  color: #e7f0eb;
+}
+
+.dashboard.theme-dark .pagination-button.active {
+  border-color: #2a6b58;
+  background: #2a6b58;
+  color: #ffffff;
+}
+
+.dashboard.theme-dark .profile-dropdown-minimal,
+.dashboard.theme-dark .minimal-dropdown-user,
+.dashboard.theme-dark .profile-dropdown-minimal .dropdown-item {
+  background: #172823 !important;
+  color: #dce8e3 !important;
+}
+
+.dashboard.theme-dark .minimal-dropdown-user strong {
+  color: #edf5f1;
+}
+
+.dashboard.theme-dark .minimal-dropdown-user span {
+  color: #9aaca5;
+}
+
+@media (max-width: 900px) {
+  .settings-page-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.theme-switch {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
+
+.theme-switch-knob {
+  margin-top: 0 !important;
+  flex: 0 0 18px;
+}
