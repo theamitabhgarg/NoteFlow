@@ -1,8 +1,8 @@
-# 📝 NoteFlow
+# NoteFlow
 
 NoteFlow is a full-stack note-taking application built with **React, FastAPI, and MongoDB**. It allows users to securely create, manage, search, comment on, and upvote notes.
 
-## 🚀 Features
+## Features
 
 - User registration and login
 - JWT-based authentication
@@ -18,7 +18,7 @@ NoteFlow is a full-stack note-taking application built with **React, FastAPI, an
 - Role-based authorization
 - MongoDB indexing to prevent duplicate votes
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -29,7 +29,7 @@ NoteFlow is a full-stack note-taking application built with **React, FastAPI, an
 | Server | Uvicorn |
 | Version Control | Git, GitHub |
 
-## 🏗️ Architecture
+## Architecture
 
 ```text
 ┌──────────────────────┐
