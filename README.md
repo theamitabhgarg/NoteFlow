@@ -1,4 +1,4 @@
-# 📝 NoteFlow
+# NoteFlow
 
 NoteFlow is a full-stack note-taking application that allows users to create, manage, search, and interact with notes.
 
