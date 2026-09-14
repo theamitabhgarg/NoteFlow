@@ -4,9 +4,15 @@ from bson import ObjectId
 
 from pymongo.errors import DuplicateKeyError
 
-from database import votes_collection, notes_collection
+from database import (
+    votes_collection,
+    notes_collection,
+    users_collection
+)
 
 from auth import get_current_user
+
+from notification_client import notify_upvote_added
 
 
 router = APIRouter()
@@ -44,7 +50,9 @@ def upvote_note(
 
     try:
 
-        votes_collection.insert_one(new_vote)
+        votes_collection.insert_one(
+            new_vote
+        )
 
     except DuplicateKeyError:
 
@@ -54,13 +62,49 @@ def upvote_note(
         )
 
     notes_collection.update_one(
-        {"_id": ObjectId(note_id)},
+        {
+            "_id": ObjectId(note_id)
+        },
         {
             "$inc": {
                 "upvote_count": 1
             }
         }
     )
+
+    # --------------------------------------------------
+    # NOTIFICATION
+    #
+    # Notify the owner of the note.
+    # --------------------------------------------------
+
+    note_owner_id = note.get("user_id")
+
+    if note_owner_id:
+
+        try:
+
+            note_owner = users_collection.find_one({
+                "_id": ObjectId(note_owner_id)
+            })
+
+            if note_owner:
+
+                owner_email = note_owner.get("email")
+
+                if owner_email:
+
+                    notify_upvote_added(
+                        recipient=owner_email,
+                        voter_username=current_user["username"],
+                        note_title=note["title"]
+                    )
+
+        except Exception as error:
+
+            print(
+                f"Upvote notification error: {error}"
+            )
 
     return {
         "message": "Note upvoted successfully"
@@ -107,7 +151,9 @@ def remove_upvote(
     })
 
     notes_collection.update_one(
-        {"_id": ObjectId(note_id)},
+        {
+            "_id": ObjectId(note_id)
+        },
         {
             "$inc": {
                 "upvote_count": -1

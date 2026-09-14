@@ -5,9 +5,7 @@ import jwt
 from fastapi import APIRouter, Form, HTTPException
 
 from database import users_collection
-
 from models import UserRegister
-
 from auth import password_hash, SECRET_KEY, ALGORITHM
 
 
@@ -27,10 +25,21 @@ def register(user: UserRegister):
             detail="Username already exists"
         )
 
+    existing_email = users_collection.find_one({
+        "email": user.email
+    })
+
+    if existing_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already exists"
+        )
+
     hashed_password = password_hash.hash(user.password)
 
     users_collection.insert_one({
         "username": user.username,
+        "email": user.email,
         "password": hashed_password,
         "role": "user"
     })

@@ -2,13 +2,21 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from bson import ObjectId
 
-from database import notes_collection, users_collection, comments_collection, votes_collection
+from database import (
+    notes_collection,
+    users_collection,
+    comments_collection,
+    votes_collection
+)
 
 from models import Note
 
 from auth import get_current_user
 
+from notification_client import notify_note_created
+
 from datetime import datetime, timezone
+
 
 router = APIRouter()
 
@@ -36,12 +44,7 @@ def get_notes(
 
     query = {}
 
-    # -----------------------------
-    # SEARCH
-    # -----------------------------
-
     if search:
-
         query["$or"] = [
             {
                 "title": {
@@ -63,63 +66,38 @@ def get_notes(
             }
         ]
 
-    # -----------------------------
-    # TAG FILTER
-    # -----------------------------
-
     if tag:
-
         query["tags"] = {
             "$in": [tag]
         }
 
-    # -----------------------------
-    # COUNT
-    # -----------------------------
-
     total_notes = notes_collection.count_documents(query)
-
-    # -----------------------------
-    # PAGINATION
-    # -----------------------------
 
     skip = (page - 1) * limit
 
-    # -----------------------------
-    # SORT
-    # -----------------------------
-
     if sort == "popular":
-
         notes_cursor = notes_collection.find(query).sort(
             "upvote_count",
             -1
         )
 
     elif sort == "oldest":
-
         notes_cursor = notes_collection.find(query).sort(
             "created_at",
             1
         )
 
     elif sort == "newest":
-
         notes_cursor = notes_collection.find(query).sort(
             "created_at",
             -1
         )
 
     else:
-
         raise HTTPException(
             status_code=400,
             detail="Sort must be popular, newest, or oldest"
         )
-
-    # -----------------------------
-    # PAGINATION
-    # -----------------------------
 
     notes_cursor = notes_cursor.skip(skip).limit(limit)
 
@@ -185,7 +163,9 @@ def get_my_notes(
 
     user_id = str(current_user["_id"])
 
-    query = {"user_id": user_id}
+    query = {
+        "user_id": user_id
+    }
 
     if search:
         query["$or"] = [
@@ -210,17 +190,32 @@ def get_my_notes(
         ]
 
     if tag:
-        query["tags"] = {"$in": [tag]}
+        query["tags"] = {
+            "$in": [tag]
+        }
 
     total_notes = notes_collection.count_documents(query)
+
     skip = (page - 1) * limit
 
     if sort == "popular":
-        notes_cursor = notes_collection.find(query).sort("upvote_count", -1)
+        notes_cursor = notes_collection.find(query).sort(
+            "upvote_count",
+            -1
+        )
+
     elif sort == "oldest":
-        notes_cursor = notes_collection.find(query).sort("created_at", 1)
+        notes_cursor = notes_collection.find(query).sort(
+            "created_at",
+            1
+        )
+
     elif sort == "newest":
-        notes_cursor = notes_collection.find(query).sort("created_at", -1)
+        notes_cursor = notes_collection.find(query).sort(
+            "created_at",
+            -1
+        )
+
     else:
         raise HTTPException(
             status_code=400,
@@ -258,9 +253,17 @@ def get_my_notes(
 
 @router.get("/tags")
 def get_tags():
+
     tags = notes_collection.distinct("tags")
-    tags = sorted(tag for tag in tags if tag)
-    return {"tags": tags}
+
+    tags = sorted(
+        tag for tag in tags
+        if tag
+    )
+
+    return {
+        "tags": tags
+    }
 
 
 @router.get("/notes/{note_id}")
@@ -328,6 +331,31 @@ def create_note(
 
     result = notes_collection.insert_one(new_note)
 
+    # --------------------------------------------------
+    # NOTIFICATION
+    #
+    # Notify every registered user except the creator.
+    # --------------------------------------------------
+
+    other_users = users_collection.find({
+        "_id": {
+            "$ne": current_user["_id"]
+        }
+    })
+
+    for user in other_users:
+
+        email = user.get("email")
+
+        if not email:
+            continue
+
+        notify_note_created(
+            recipient=email,
+            creator_username=current_user["username"],
+            note_title=note.title
+        )
+
     return {
         "message": "Note created successfully",
         "note_id": str(result.inserted_id)
@@ -359,7 +387,8 @@ def update_note(
 
     if (
         current_user["role"] != "admin"
-        and existing_note.get("user_id") != str(current_user["_id"])
+        and existing_note.get("user_id")
+        != str(current_user["_id"])
     ):
         raise HTTPException(
             status_code=403,
@@ -367,7 +396,9 @@ def update_note(
         )
 
     notes_collection.update_one(
-        {"_id": ObjectId(note_id)},
+        {
+            "_id": ObjectId(note_id)
+        },
         {
             "$set": {
                 "title": note.title,
@@ -407,7 +438,8 @@ def delete_note(
 
     if (
         current_user["role"] != "admin"
-        and existing_note.get("user_id") != str(current_user["_id"])
+        and existing_note.get("user_id")
+        != str(current_user["_id"])
     ):
         raise HTTPException(
             status_code=403,

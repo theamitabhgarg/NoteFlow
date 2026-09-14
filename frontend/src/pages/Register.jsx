@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 function Register() {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -18,7 +19,6 @@ function Register() {
     setError("");
     setSuccess("");
 
-    // Check passwords before sending anything to the backend
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -41,6 +41,7 @@ function Register() {
           },
           body: JSON.stringify({
             username: username,
+            email: email,
             password: password,
           }),
         }
@@ -61,7 +62,6 @@ function Register() {
         "Registration successful! Redirecting to login..."
       );
 
-      // Give the user a moment to see the success message
       setTimeout(() => {
         navigate("/login");
       }, 1500);
@@ -95,6 +95,23 @@ function Register() {
               value={username}
               onChange={(event) =>
                 setUsername(event.target.value)
+              }
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">
+              Email
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(event) =>
+                setEmail(event.target.value)
               }
               required
             />
@@ -152,7 +169,9 @@ function Register() {
             type="submit"
             disabled={loading}
           >
-            {loading ? "Creating Account..." : "Register"}
+            {loading
+              ? "Creating Account..."
+              : "Register"}
           </button>
         </form>
 
