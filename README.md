@@ -158,20 +158,34 @@ Change these credentials before using the project anywhere public.
 
 ## Architecture
 
-```text
-React + Vite
-     |
-     | HTTP / REST API
-     v
-FastAPI
-     |
-     v
-Database Abstraction Layer
-     |
-     +----------------------+
-     |                      |
-     v                      v
-  MongoDB              PostgreSQL
+```mermaid
+graph TD
+    %% Custom Styling
+    classDef frontend fill:#61DAFB,stroke:#333,stroke-width:2px,color:#000;
+    classDef api fill:#009688,stroke:#333,stroke-width:2px,color:#fff;
+    classDef abstraction fill:#FF9800,stroke:#333,stroke-width:2px,color:#fff;
+    classDef database fill:#4CAF50,stroke:#333,stroke-width:2px,color:#fff;
+
+    %% Nodes
+    FE[React + Vite]:::frontend
+    API[FastAPI]:::api
+    DAL[Database Abstraction Layer]:::abstraction
+    DB1[(MongoDB)]:::database
+    DB2[(PostgreSQL)]:::database
+
+    %% Connections
+    FE -->|HTTP / REST API| API
+    API --> DAL
+    DAL --> DB1
+    DAL --> DB2
+
+    %% Subgraph for interchangeable DBs
+    subgraph Storage Layer [Interchangeable Storage]
+        DB1
+        DB2
+    end
+
+    style Storage Layer fill:#f9f9f9,stroke:#ccc,stroke-width:1px,stroke-dasharray: 5 5
 ```
 
 The frontend and API endpoints remain the same while the database implementation changes underneath.
