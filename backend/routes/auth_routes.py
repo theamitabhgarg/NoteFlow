@@ -1,48 +1,48 @@
+
 from datetime import datetime, timedelta, timezone
 
 import jwt
-
 from fastapi import APIRouter, Form, HTTPException
 
-from database import users_collection
+from database import (
+    create_user,
+    get_user_by_email,
+    get_user_by_username,
+)
 from models import UserRegister
 from auth import password_hash, SECRET_KEY, ALGORITHM
-
 
 router = APIRouter()
 
 
 @router.post("/register")
 def register(user: UserRegister):
-
-    existing_user = users_collection.find_one({
-        "username": user.username
-    })
-
-    if existing_user:
+    if get_user_by_username(user.username):
         raise HTTPException(
             status_code=400,
-            detail="Username already exists"
+            detail="Username already exists",
         )
 
-    existing_email = users_collection.find_one({
-        "email": user.email
-    })
-
-    if existing_email:
+    if get_user_by_email(user.email):
         raise HTTPException(
             status_code=400,
-            detail="Email already exists"
+            detail="Email already exists",
         )
 
     hashed_password = password_hash.hash(user.password)
 
-    users_collection.insert_one({
-        "username": user.username,
-        "email": user.email,
-        "password": hashed_password,
-        "role": "user"
-    })
+    try:
+        create_user(
+            username=user.username,
+            email=user.email,
+            password=hashed_password,
+            role="user",
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
     return {
         "message": "User registered successfully"
@@ -52,39 +52,36 @@ def register(user: UserRegister):
 @router.post("/login")
 def login(
     username: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
 ):
-
-    user = users_collection.find_one({
-        "username": username
-    })
+    user = get_user_by_username(username)
 
     if not user:
         raise HTTPException(
             status_code=401,
-            detail="Invalid username or password"
+            detail="Invalid username or password",
         )
 
     if not password_hash.verify(password, user["password"]):
         raise HTTPException(
             status_code=401,
-            detail="Invalid username or password"
+            detail="Invalid username or password",
         )
 
     payload = {
         "user_id": str(user["_id"]),
         "username": user["username"],
         "role": user["role"],
-        "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
     }
 
     token = jwt.encode(
         payload,
         SECRET_KEY,
-        algorithm=ALGORITHM
+        algorithm=ALGORITHM,
     )
 
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
     }

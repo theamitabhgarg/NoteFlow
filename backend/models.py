@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+
+from pydantic import BaseModel, Field
 
 
 class UserRegister(BaseModel):
@@ -10,7 +11,7 @@ class UserRegister(BaseModel):
 class Note(BaseModel):
     title: str
     content: str
-    tags: list[str] = []
+    tags: list[str] = Field(default_factory=list)
 
 
 class Comment(BaseModel):

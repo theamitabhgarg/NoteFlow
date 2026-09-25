@@ -1,6 +1,6 @@
 # NoteFlow
 
-NoteFlow is a full-stack note-taking application built with **React, FastAPI, and MongoDB**. It allows users to securely create, manage, search, comment on, and upvote notes.
+NoteFlow is a full-stack note-taking application built with **React, FastAPI, MongoDB, and PostgreSQL**.
 
 ## Features
 
@@ -16,7 +16,9 @@ NoteFlow is a full-stack note-taking application built with **React, FastAPI, an
 - User profiles and statistics
 - Admin functionality
 - Role-based authorization
-- MongoDB indexing to prevent duplicate votes
+- MongoDB or PostgreSQL database backend
+- Database switching through `.env`
+- PostgreSQL seed data
 
 ## Tech Stack
 
@@ -25,28 +27,151 @@ NoteFlow is a full-stack note-taking application built with **React, FastAPI, an
 | Frontend | React, Vite, JavaScript, CSS |
 | Backend | Python, FastAPI, Pydantic |
 | Authentication | JWT, OAuth2 |
-| Database | MongoDB, PyMongo |
+| Database | MongoDB, PostgreSQL |
+| ORM | SQLAlchemy |
+| PostgreSQL Driver | Psycopg 3 |
 | Server | Uvicorn |
-| Version Control | Git, GitHub |
+| Version Control | Git/GitHub |
+
+## Database Switching
+
+The backend supports both databases.
+
+In `backend/.env`:
+
+```env
+DATABASE_TYPE=mongodb
+```
+
+uses the existing MongoDB database.
+
+```env
+DATABASE_TYPE=postgresql
+```
+
+uses PostgreSQL.
+
+The FastAPI routes are database-independent. The database layer chooses the correct implementation.
+
+## MongoDB
+
+Default configuration:
+
+```env
+MONGO_URL=mongodb://localhost:27017
+MONGO_DATABASE=notes_db
+```
+
+## PostgreSQL
+
+Example:
+
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=noteflow
+```
+
+Create the PostgreSQL database first:
+
+```sql
+CREATE DATABASE noteflow;
+```
+
+Then install backend dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+When PostgreSQL mode is selected, NoteFlow automatically creates these tables:
+
+- `users`
+- `notes`
+- `comments`
+- `votes`
+
+The schema uses primary keys, foreign keys, unique constraints and indexes.
+
+## Seed PostgreSQL
+
+Set:
+
+```env
+DATABASE_TYPE=postgresql
+```
+
+Then from `backend`:
+
+```bash
+python ../seed_postgresql.py
+```
+
+Sample users are created with:
+
+```text
+password123
+```
+
+## Run Backend
+
+From `backend`:
+
+```bash
+uvicorn main:app --reload
+```
+
+The root endpoint shows the active database:
+
+```text
+GET /
+```
+
+Example:
+
+```json
+{
+  "message": "My Notes API is working!",
+  "database": "postgresql"
+}
+```
+
+## Create Admin
+
+From the project root:
+
+```bash
+python create_admin.py
+```
+
+Default admin:
+
+```text
+username: admin
+password: admin123
+email: admin@noteflow.local
+```
+
+Change these credentials before using the project anywhere public.
 
 ## Architecture
 
 ```text
-┌──────────────────────┐
-│   React + Vite       │
-│      Frontend        │
-└──────────┬───────────┘
-           │
-           │ HTTP / REST API
-           ▼
-┌──────────────────────┐
-│       FastAPI        │
-│       Backend        │
-└──────────┬───────────┘
-           │
-           │ Database Queries
-           ▼
-┌──────────────────────┐
-│       MongoDB        │
-│       Database       │
-└──────────────────────┘
+React + Vite
+     |
+     | HTTP / REST API
+     v
+FastAPI
+     |
+     v
+Database Abstraction Layer
+     |
+     +----------------------+
+     |                      |
+     v                      v
+  MongoDB              PostgreSQL
+```
+
+The frontend and API endpoints remain the same while the database implementation changes underneath.

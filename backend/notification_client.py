@@ -2,6 +2,9 @@ import os
 from typing import Optional
 
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 NOTIFICATION_SERVICE_URL = os.getenv(

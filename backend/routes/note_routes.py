@@ -1,141 +1,77 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 
-from bson import ObjectId
-
 from database import (
-    notes_collection,
-    users_collection,
-    comments_collection,
-    votes_collection
+    create_note as db_create_note,
+    delete_note as db_delete_note,
+    get_all_users_except,
+    get_note as db_get_note,
+    get_notes as db_get_notes,
+    get_tags,
+    update_note as db_update_note,
 )
-
 from models import Note
-
 from auth import get_current_user
-
 from notification_client import notify_note_created
-
-from datetime import datetime, timezone
-
 
 router = APIRouter()
 
 
-@router.get("/notes")
-def get_notes(
-    search: str | None = None,
-    tag: str | None = None,
-    sort: str = "newest",
-    page: int = 1,
-    limit: int = 10
-):
-
+def validate_pagination(page: int, limit: int):
     if page < 1:
         raise HTTPException(
             status_code=400,
-            detail="Page must be 1 or greater"
+            detail="Page must be 1 or greater",
         )
 
     if limit < 1 or limit > 100:
         raise HTTPException(
             status_code=400,
-            detail="Limit must be between 1 and 100"
+            detail="Limit must be between 1 and 100",
         )
 
-    query = {}
 
-    if search:
-        query["$or"] = [
-            {
-                "title": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            },
-            {
-                "content": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            },
-            {
-                "tags": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            }
-        ]
-
-    if tag:
-        query["tags"] = {
-            "$in": [tag]
-        }
-
-    total_notes = notes_collection.count_documents(query)
-
-    skip = (page - 1) * limit
-
-    if sort == "popular":
-        notes_cursor = notes_collection.find(query).sort(
-            "upvote_count",
-            -1
-        )
-
-    elif sort == "oldest":
-        notes_cursor = notes_collection.find(query).sort(
-            "created_at",
-            1
-        )
-
-    elif sort == "newest":
-        notes_cursor = notes_collection.find(query).sort(
-            "created_at",
-            -1
-        )
-
-    else:
+def validate_sort(sort: str):
+    if sort not in {"popular", "newest", "oldest"}:
         raise HTTPException(
             status_code=400,
-            detail="Sort must be popular, newest, or oldest"
+            detail="Sort must be popular, newest, or oldest",
         )
 
-    notes_cursor = notes_cursor.skip(skip).limit(limit)
 
-    result = []
+@router.get("/notes")
+def get_notes_endpoint(
+    search: str | None = None,
+    tag: str | None = None,
+    sort: str = "newest",
+    page: int = 1,
+    limit: int = 10,
+):
+    validate_pagination(page, limit)
+    validate_sort(sort)
 
-    for note in notes_cursor:
-
-        username = None
-
-        if note.get("user_id"):
-            user = users_collection.find_one({
-                "_id": ObjectId(note["user_id"])
-            })
-
-            if user:
-                username = user["username"]
-
-        result.append({
-            "id": str(note["_id"]),
-            "title": note["title"],
-            "content": note["content"],
-            "user_id": note.get("user_id"),
-            "username": username,
-            "tags": note.get("tags", []),
-            "created_at": note.get("created_at"),
-            "updated_at": note.get("updated_at"),
-            "comment_count": note.get("comment_count", 0),
-            "upvote_count": note.get("upvote_count", 0)
-        })
+    try:
+        notes, total_notes = db_get_notes(
+            search=search,
+            tag=tag,
+            sort=sort,
+            page=page,
+            limit=limit,
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid database ID",
+        )
 
     total_pages = (total_notes + limit - 1) // limit
 
     return {
-        "notes": result,
+        "notes": notes,
         "page": page,
         "limit": limit,
         "total_notes": total_notes,
-        "total_pages": total_pages
+        "total_pages": total_pages,
     }
 
 
@@ -146,205 +82,83 @@ def get_my_notes(
     sort: str = "newest",
     page: int = 1,
     limit: int = 8,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-
-    if page < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="Page must be 1 or greater"
-        )
-
-    if limit < 1 or limit > 100:
-        raise HTTPException(
-            status_code=400,
-            detail="Limit must be between 1 and 100"
-        )
+    validate_pagination(page, limit)
+    validate_sort(sort)
 
     user_id = str(current_user["_id"])
 
-    query = {
-        "user_id": user_id
-    }
-
-    if search:
-        query["$or"] = [
-            {
-                "title": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            },
-            {
-                "content": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            },
-            {
-                "tags": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            }
-        ]
-
-    if tag:
-        query["tags"] = {
-            "$in": [tag]
-        }
-
-    total_notes = notes_collection.count_documents(query)
-
-    skip = (page - 1) * limit
-
-    if sort == "popular":
-        notes_cursor = notes_collection.find(query).sort(
-            "upvote_count",
-            -1
+    try:
+        notes, total_notes = db_get_notes(
+            search=search,
+            tag=tag,
+            sort=sort,
+            page=page,
+            limit=limit,
+            user_id=user_id,
         )
-
-    elif sort == "oldest":
-        notes_cursor = notes_collection.find(query).sort(
-            "created_at",
-            1
-        )
-
-    elif sort == "newest":
-        notes_cursor = notes_collection.find(query).sort(
-            "created_at",
-            -1
-        )
-
-    else:
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Sort must be popular, newest, or oldest"
+            detail="Invalid user ID",
         )
 
-    notes_cursor = notes_cursor.skip(skip).limit(limit)
-
-    result = []
-
-    for note in notes_cursor:
-        result.append({
-            "id": str(note["_id"]),
-            "title": note["title"],
-            "content": note["content"],
-            "user_id": note.get("user_id"),
-            "username": current_user["username"],
-            "tags": note.get("tags", []),
-            "created_at": note.get("created_at"),
-            "updated_at": note.get("updated_at"),
-            "comment_count": note.get("comment_count", 0),
-            "upvote_count": note.get("upvote_count", 0)
-        })
+    # Preserve the original NoteFlow behavior.
+    for note in notes:
+        note["username"] = current_user["username"]
 
     total_pages = (total_notes + limit - 1) // limit
 
     return {
-        "notes": result,
+        "notes": notes,
         "page": page,
         "limit": limit,
         "total_notes": total_notes,
-        "total_pages": total_pages
+        "total_pages": total_pages,
     }
 
 
 @router.get("/tags")
-def get_tags():
-
-    tags = notes_collection.distinct("tags")
-
-    tags = sorted(
-        tag for tag in tags
-        if tag
-    )
-
+def get_tags_endpoint():
     return {
-        "tags": tags
+        "tags": get_tags()
     }
 
 
 @router.get("/notes/{note_id}")
 def get_note(note_id: str):
-
-    if not ObjectId.is_valid(note_id):
+    try:
+        note = db_get_note(note_id)
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid note ID"
+            detail="Invalid note ID",
         )
-
-    note = notes_collection.find_one({
-        "_id": ObjectId(note_id)
-    })
 
     if note is None:
         raise HTTPException(
             status_code=404,
-            detail="Note not found"
+            detail="Note not found",
         )
 
-    username = None
-
-    if note.get("user_id"):
-
-        user = users_collection.find_one({
-            "_id": ObjectId(note["user_id"])
-        })
-
-        if user:
-            username = user["username"]
-
-    return {
-        "id": str(note["_id"]),
-        "title": note["title"],
-        "content": note["content"],
-        "user_id": note.get("user_id"),
-        "username": username,
-        "tags": note.get("tags", []),
-        "created_at": note.get("created_at"),
-        "updated_at": note.get("updated_at"),
-        "comment_count": note.get("comment_count", 0),
-        "upvote_count": note.get("upvote_count", 0)
-    }
+    return note
 
 
 @router.post("/notes")
 def create_note(
     note: Note,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
+    note_id = db_create_note(
+        title=note.title,
+        content=note.content,
+        tags=note.tags,
+        user_id=str(current_user["_id"]),
+    )
 
-    now = datetime.now(timezone.utc)
-
-    new_note = {
-        "title": note.title,
-        "content": note.content,
-        "tags": note.tags,
-        "user_id": str(current_user["_id"]),
-        "created_at": now,
-        "updated_at": now,
-        "comment_count": 0,
-        "upvote_count": 0
-    }
-
-    result = notes_collection.insert_one(new_note)
-
-    # --------------------------------------------------
-    # NOTIFICATION
-    #
     # Notify every registered user except the creator.
-    # --------------------------------------------------
-
-    other_users = users_collection.find({
-        "_id": {
-            "$ne": current_user["_id"]
-        }
-    })
-
-    for user in other_users:
-
+    for user in get_all_users_except(str(current_user["_id"])):
         email = user.get("email")
 
         if not email:
@@ -353,12 +167,12 @@ def create_note(
         notify_note_created(
             recipient=email,
             creator_username=current_user["username"],
-            note_title=note.title
+            note_title=note.title,
         )
 
     return {
         "message": "Note created successfully",
-        "note_id": str(result.inserted_id)
+        "note_id": note_id,
     }
 
 
@@ -366,47 +180,36 @@ def create_note(
 def update_note(
     note_id: str,
     note: Note,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-
-    if not ObjectId.is_valid(note_id):
+    try:
+        existing_note = db_get_note(note_id)
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid note ID"
+            detail="Invalid note ID",
         )
-
-    existing_note = notes_collection.find_one({
-        "_id": ObjectId(note_id)
-    })
 
     if existing_note is None:
         raise HTTPException(
             status_code=404,
-            detail="Note not found"
+            detail="Note not found",
         )
 
     if (
         current_user["role"] != "admin"
-        and existing_note.get("user_id")
-        != str(current_user["_id"])
+        and existing_note.get("user_id") != str(current_user["_id"])
     ):
         raise HTTPException(
             status_code=403,
-            detail="You can only update your own notes"
+            detail="You can only update your own notes",
         )
 
-    notes_collection.update_one(
-        {
-            "_id": ObjectId(note_id)
-        },
-        {
-            "$set": {
-                "title": note.title,
-                "content": note.content,
-                "tags": note.tags,
-                "updated_at": datetime.now(timezone.utc)
-            }
-        }
+    db_update_note(
+        note_id=note_id,
+        title=note.title,
+        content=note.content,
+        tags=note.tags,
     )
 
     return {
@@ -417,46 +220,32 @@ def update_note(
 @router.delete("/notes/{note_id}")
 def delete_note(
     note_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-
-    if not ObjectId.is_valid(note_id):
+    try:
+        existing_note = db_get_note(note_id)
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid note ID"
+            detail="Invalid note ID",
         )
-
-    existing_note = notes_collection.find_one({
-        "_id": ObjectId(note_id)
-    })
 
     if existing_note is None:
         raise HTTPException(
             status_code=404,
-            detail="Note not found"
+            detail="Note not found",
         )
 
     if (
         current_user["role"] != "admin"
-        and existing_note.get("user_id")
-        != str(current_user["_id"])
+        and existing_note.get("user_id") != str(current_user["_id"])
     ):
         raise HTTPException(
             status_code=403,
-            detail="You can only delete your own notes"
+            detail="You can only delete your own notes",
         )
 
-    notes_collection.delete_one({
-        "_id": ObjectId(note_id)
-    })
-
-    comments_collection.delete_many({
-        "note_id": note_id
-    })
-
-    votes_collection.delete_many({
-        "note_id": note_id
-    })
+    db_delete_note(note_id)
 
     return {
         "message": "Note deleted successfully"

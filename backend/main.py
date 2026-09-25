@@ -1,6 +1,8 @@
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from database import DATABASE_TYPE, initialize_database
 from routes.auth_routes import router as auth_router
 from routes.user_routes import router as user_router
 from routes.note_routes import router as note_router
@@ -8,7 +10,13 @@ from routes.comment_routes import router as comment_router
 from routes.vote_routes import router as vote_router
 
 
-app = FastAPI()
+initialize_database()
+
+app = FastAPI(
+    title="NoteFlow API",
+    description=f"NoteFlow backend using {DATABASE_TYPE}",
+)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,7 +35,8 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {
-        "message": "My Notes API is working!"
+        "message": "My Notes API is working!",
+        "database": DATABASE_TYPE,
     }
 
 

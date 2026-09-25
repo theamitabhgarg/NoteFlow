@@ -1,165 +1,86 @@
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from bson import ObjectId
-
 from database import (
-    comments_collection,
-    notes_collection,
-    users_collection
+    create_comment as db_create_comment,
+    delete_comment as db_delete_comment,
+    get_comment as db_get_comment,
+    get_comments as db_get_comments,
+    get_user_by_id,
+    update_comment as db_update_comment,
 )
-
 from models import Comment
-
 from auth import get_current_user
-
 from notification_client import notify_comment_added
-
 
 router = APIRouter()
 
 
 @router.get("/notes/{note_id}/comments")
 def get_comments(note_id: str):
-
-    if not ObjectId.is_valid(note_id):
+    try:
+        comments = db_get_comments(note_id)
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid note ID"
+            detail="Invalid note ID",
         )
 
-    note = notes_collection.find_one({
-        "_id": ObjectId(note_id)
-    })
-
-    if note is None:
+    if comments is None:
         raise HTTPException(
             status_code=404,
-            detail="Note not found"
+            detail="Note not found",
         )
 
-    comments = list(
-        comments_collection.find({
-            "note_id": note_id
-        }).sort(
-            "created_at",
-            1
-        )
-    )
-
-    result = []
-
-    for comment in comments:
-
-        username = None
-
-        if comment.get("user_id"):
-
-            user = users_collection.find_one({
-                "_id": ObjectId(comment["user_id"])
-            })
-
-            if user:
-                username = user["username"]
-
-        result.append({
-            "id": str(comment["_id"]),
-            "note_id": comment["note_id"],
-            "user_id": comment["user_id"],
-            "username": username,
-            "content": comment["content"],
-            "created_at": comment.get("created_at"),
-            "updated_at": comment.get("updated_at")
-        })
-
-    return result
+    return comments
 
 
 @router.post("/notes/{note_id}/comments")
 def create_comment(
     note_id: str,
     comment: Comment,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-
-    if not ObjectId.is_valid(note_id):
+    try:
+        result = db_create_comment(
+            note_id=note_id,
+            user_id=str(current_user["_id"]),
+            content=comment.content,
+        )
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid note ID"
+            detail="Invalid note ID or user ID",
         )
 
-    note = notes_collection.find_one({
-        "_id": ObjectId(note_id)
-    })
-
-    if note is None:
+    if result is None:
         raise HTTPException(
             status_code=404,
-            detail="Note not found"
+            detail="Note not found",
         )
 
-    now = datetime.now(timezone.utc)
-
-    new_comment = {
-        "note_id": note_id,
-        "user_id": str(current_user["_id"]),
-        "content": comment.content,
-        "created_at": now,
-        "updated_at": now
-    }
-
-    result = comments_collection.insert_one(
-        new_comment
-    )
-
-    notes_collection.update_one(
-        {
-            "_id": ObjectId(note_id)
-        },
-        {
-            "$inc": {
-                "comment_count": 1
-            }
-        }
-    )
-
-    # --------------------------------------------------
-    # NOTIFICATION
-    #
-    # Notify the owner of the note.
-    # --------------------------------------------------
-
+    note = result["note"]
     note_owner_id = note.get("user_id")
 
     if note_owner_id:
-
         try:
-            note_owner = users_collection.find_one({
-                "_id": ObjectId(note_owner_id)
-            })
+            note_owner = get_user_by_id(str(note_owner_id))
 
             if note_owner:
-
                 owner_email = note_owner.get("email")
 
                 if owner_email:
-
                     notify_comment_added(
                         recipient=owner_email,
                         commenter_username=current_user["username"],
-                        note_title=note["title"]
+                        note_title=note["title"],
                     )
-
         except Exception as error:
-
-            print(
-                f"Comment notification error: {error}"
-            )
+            print(f"Comment notification error: {error}")
 
     return {
         "message": "Comment added successfully",
-        "comment_id": str(result.inserted_id)
+        "comment_id": result["id"],
     }
 
 
@@ -167,45 +88,34 @@ def create_comment(
 def update_comment(
     comment_id: str,
     comment: Comment,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-
-    if not ObjectId.is_valid(comment_id):
+    try:
+        existing_comment = db_get_comment(comment_id)
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid comment ID"
+            detail="Invalid comment ID",
         )
-
-    existing_comment = comments_collection.find_one({
-        "_id": ObjectId(comment_id)
-    })
 
     if existing_comment is None:
         raise HTTPException(
             status_code=404,
-            detail="Comment not found"
+            detail="Comment not found",
         )
 
     if (
         current_user["role"] != "admin"
-        and existing_comment["user_id"]
-        != str(current_user["_id"])
+        and existing_comment["user_id"] != str(current_user["_id"])
     ):
         raise HTTPException(
             status_code=403,
-            detail="You can only edit your own comments"
+            detail="You can only edit your own comments",
         )
 
-    comments_collection.update_one(
-        {
-            "_id": ObjectId(comment_id)
-        },
-        {
-            "$set": {
-                "content": comment.content,
-                "updated_at": datetime.now(timezone.utc)
-            }
-        }
+    db_update_comment(
+        comment_id=comment_id,
+        content=comment.content,
     )
 
     return {
@@ -216,49 +126,32 @@ def update_comment(
 @router.delete("/comments/{comment_id}")
 def delete_comment(
     comment_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-
-    if not ObjectId.is_valid(comment_id):
+    try:
+        existing_comment = db_get_comment(comment_id)
+    except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid comment ID"
+            detail="Invalid comment ID",
         )
-
-    existing_comment = comments_collection.find_one({
-        "_id": ObjectId(comment_id)
-    })
 
     if existing_comment is None:
         raise HTTPException(
             status_code=404,
-            detail="Comment not found"
+            detail="Comment not found",
         )
 
     if (
         current_user["role"] != "admin"
-        and existing_comment["user_id"]
-        != str(current_user["_id"])
+        and existing_comment["user_id"] != str(current_user["_id"])
     ):
         raise HTTPException(
             status_code=403,
-            detail="You can only delete your own comments"
+            detail="You can only delete your own comments",
         )
 
-    comments_collection.delete_one({
-        "_id": ObjectId(comment_id)
-    })
-
-    notes_collection.update_one(
-        {
-            "_id": ObjectId(existing_comment["note_id"])
-        },
-        {
-            "$inc": {
-                "comment_count": -1
-            }
-        }
-    )
+    db_delete_comment(comment_id)
 
     return {
         "message": "Comment deleted successfully"
